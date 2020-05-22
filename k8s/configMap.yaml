@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-config
+data:
+  s3_bucket: "yourBucketName"
+  cf_domain_name: "yourCF.cloudfront.net"
+  upload_event_queue_url: "https://sqs.${AWS:Region}.amazonaws.com/${AWS::AccountId}/yourQueueName"

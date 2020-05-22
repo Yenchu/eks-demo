@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upload-dep
+spec:
+  selector:
+    matchLabels:
+      app: upload-app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: upload-app
+    spec:
+      serviceAccountName: demo-isa
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: demo
+          image: ${AWS::AccountId}.dkr.ecr.${AWS:Region}.amazonaws.com/demo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: SVC
+              value: upload
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: env-config
+                  key: s3_bucket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upload-svc
+spec:
+  type: NodePort
+  selector:
+    app: upload-app
+  ports:
+    - port: 80
+      targetPort: 80

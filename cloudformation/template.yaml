@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFormation Template for EKS image uploading and download.
+
+Parameters:
+  ImageBucketName:
+    Type: String
+    Default: eksdemobucket
+  UploadEventQueueName:
+    Type: String
+    Default: upload-event-queue
+
+Resources:
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ImageBucketName
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Queue: !GetAtt UploadEventQueue.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: 'resize/'
+
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageBucketName
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource:
+              - !Sub 'arn:aws:s3:::${ImageBucketName}/*'
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "EKS image download"
+
+  CloudfrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: "Cloudfront distribution for EKS image download"
+        Enabled: true
+        HttpVersion: http2
+        Origins:
+          - Id: imageBucketOrigin
+            DomainName: !Sub '${ImageBucketName}.s3.amazonaws.com'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+          TargetOriginId: imageBucketOrigin
+          TrustedSigners:
+            - self
+          ViewerProtocolPolicy: redirect-to-https
+
+  UploadEventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref UploadEventQueueName
+
+  UploadEventQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref UploadEventQueue
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${UploadEventQueueName}'
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:s3:*:*:${ImageBucketName}'
+
+Outputs:
+  ImageBucket:
+    Description: "Image S3 bucket"
+    Value: !Ref ImageBucket
+  ImageDomain:
+    Description: 'Image Cloudfront domain name'
+    Value: !GetAtt CloudfrontDistribution.DomainName
+  UploadEventQueue:
+    Description: "Upload Event Queue URL"
+    Value: !Ref UploadEventQueue

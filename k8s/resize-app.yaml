@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resize-dep
+spec:
+  selector:
+    matchLabels:
+      app: resize-app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: resize-app
+    spec:
+      serviceAccountName: demo-isa
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: demo
+          image: ${AWS::AccountId}.dkr.ecr.${AWS:Region}.amazonaws.com/demo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: SVC
+              value: resize
+            - name: UPLOAD_EVENT_QUEUE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: env-config
+                  key: upload_event_queue_url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resize-svc
+spec:
+  type: NodePort
+  selector:
+    app: resize-app
+  ports:
+    - port: 80
+      targetPort: 80

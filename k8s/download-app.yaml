@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: download-dep
+spec:
+  selector:
+    matchLabels:
+      app: download-app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: download-app
+    spec:
+      serviceAccountName: demo-isa
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: demo
+          image: ${AWS::AccountId}.dkr.ecr.${AWS:Region}.amazonaws.com/demo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: SVC
+              value: download
+            - name: CF_DOMAIN_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: env-config
+                  key: cf_domain_name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-svc
+spec:
+  type: NodePort
+  selector:
+    app: download-app
+  ports:
+    - port: 80
+      targetPort: 80
