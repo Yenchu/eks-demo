@@ -1,41 +1,67 @@
-## Image uploading and downloading EKS demo
+# Image uploading and downloading EKS demo
 
-This is a demo application for image uploading and downloading.
+This is a demo application for image uploading, downloading, and resizing on EKS.
 It uses S3 prs-signed URL to upload to S3 and CloudFront signed URL to download from CloudFront.
+After uploaded to S3, S3 will send an event notification to SQS, a container app receives this message and resize the image. 
 
-### Architecture Design
+## Architecture Design
 
 ![Architecture Diagram](https://github.com/yenchu/eks-demo/raw/master/images/architecture.png)
 
-### Build and Deployment
+## Create AWS resources
 
-This project is deployed as a Kubernetes app, so you need to create an ECR image repository and EKS cluster.
-To expose container applications to the internet, you need to create an Ingress Controller to route HTTP requests to pods.
+This project uses S3, CloudFormation, SQS, and parameter store, to create these services, you can use the template file `cloudformation/template.yaml`:
 
-##### Create Amazon ECR image repository
+```bash
+aws cloudformation deploy --stack-name eks-demo-resources --template-file cloudformation/template.yaml --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND
+```
+
+### Generate CloudFront Key Pair
+
+Because signing CloudFront URL needs a key pair, you need to use root account to create one.
+
+On AWS console, select `My Security Credentials` in menu bar, select `CloudFront key pairs`, click `Create New Key Pair`.
+Then you need to store the generate key ID and private key in SSM parameter store. 
+
+### Store Key Pair in SSM Parameter Store
+
+To store CloudFront key ID in SSM parameter store, go to `Systems Manager` console, select `Parameter Store`,
+ save it with name `/applications/ServerlessDemo/CloudFront/KeyId` and type `String`.
+ 
+To store private key in parameter store, save it with name `/applications/ServerlessDemo/CloudFront/PrivateKey` and type `SecureString`.
+
+## Setup infrastructure
+
+To deploy a Kubernetes app, you need to create an ECR image repository and EKS cluster.
+If you have a microservice architecture, using an Ingress Controller is a better way
+ to expose container applications to the internet and route HTTP requests to pods.
+
+### Create Amazon ECR image repository
 
 Please follow the AWS document
  [Getting Started with Amazon ECR using the AWS Management Console](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-console.html)
  to create an image repository.
  
-##### Create EKS cluster with Fargate
+### Create EKS cluster with Fargate
 
 Please follow the AWS document 
  [Getting started with AWS Fargate on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/fargate-getting-started.html)
  to create a Kubernetes cluster.
 
-##### Create ALB ingress controller
+### Create ALB ingress controller
 
 Please follow the AWS document 
  [ALB Ingress Controller on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)
  to create an ALB ingress controller.
 
-##### Build and Push docker image
+## Build and Deployment
+
+### Build and Push docker image
 
 To push images to ECR, you need to use an authorization token to authenticate docker with ECR:
 
 ```bash
-aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
+aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
 ```
 
 Build docker image:
@@ -56,29 +82,7 @@ Push image to ECR repository:
 docker push ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/demo:latest
 ```
 
-##### Create AWS resources
-
-To create AWS resources(S3, CloudFormation and SQS) used by this demo:
-
-```bash
-aws cloudformation deploy --stack-name eks-demo-resources --template-file cloudformation/template.yaml --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND
-```
-
-##### Generate CloudFront Key Pair
-
-Because signing CloudFront URL needs a key pair, you need to use root account to create one.
-
-On AWS console, select `My Security Credentials` in menu bar, select `CloudFront key pairs`, click `Create New Key Pair`.
-Then you need to store the generate key ID and private key in SSM parameter store. 
-
-##### Store Key Pair in SSM Parameter Store
-
-To store CloudFront key ID in SSM parameter store, go to `Systems Manager` console, select `Parameter Store`,
- save it with name `/applications/ServerlessDemo/CloudFront/KeyId` and type `String`.
- 
-To store private key in parameter store, save it with name `/applications/ServerlessDemo/CloudFront/PrivateKey` and type `SecureString`.
-
-##### Use IRSA (IAM Roles for Service Accounts) to give pod permissions to access AWS resources
+### Use IRSA (IAM Roles for Service Accounts) to give pod permissions to access AWS resources
 
 For container applications being able to access AWS resources, you need to use IRSA to give them permissions.
 
@@ -92,7 +96,7 @@ Create service account and attache the previous created policy:
 
 ```bash
 eksctl create iamserviceaccount \
-    --region ap-northeast-1 \
+    --region ${AWS::Region} \
     --name demo-isa \
     --cluster eks-demo \
     --attach-policy-arn arn:aws:iam::${AWS::AccountId}:policy/EksDemoPodIAMPolicy \
@@ -102,7 +106,7 @@ eksctl create iamserviceaccount \
 
 Then you can use it as `serviceAccountName` in your pod spec.
 
-##### Deploy demo app
+### Deploy demo app
 
 Deploy a ConfigMap with S3, CloudFormation and SQS information:
 
@@ -140,11 +144,11 @@ Use the following command to find ALB endpoint:
 kubectl get ingress
 ```
 
-### Test
+## Test
 
 You can use cURL to test these APIs.
 
-##### Get S3 PreSigned URL for Upload
+### Get S3 PreSigned URL for Upload
 
 To get a S3 pre-signed URL for uploading, you need to provide a file name.
 If you want to resize the image, you have to provide content type, width and height.
@@ -168,7 +172,7 @@ Please note the response headers need to be passed back to S3 when uploading fil
 }
 ```
 
-##### Upload to S3
+### Upload to S3
 
 To upload file to S3 using pre-signed URL, you need to pass back the headers you got from calling get-upload-url API.
 
@@ -177,7 +181,7 @@ curl -X PUT -H "content-type: image/jpg" -H "x-amz-meta-heigh: 1024" -H "x-amz-m
  --data-binary '@{PATH_TO_IMAGE}.jpg'
 ```
 
-##### Get CloudFront Signed URL for Download
+### Get CloudFront Signed URL for Download
 
 To get a CloudFront signed URL for downloading, you need to provide the file name you want to download.
 
@@ -194,7 +198,7 @@ You will get the following response, the `url` is a CloudFront signed URL you ca
 }
 ```
 
-##### Download from CloudFront
+### Download from CloudFront
 
 ```
 curl -X GET {DOWNLOAD_URL}
