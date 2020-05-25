@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: env-config
 data:
-  s3_bucket: "yourBucketName"
-  cf_domain_name: "yourCF.cloudfront.net"
-  upload_event_queue_url: "https://sqs.${AWS:Region}.amazonaws.com/${AWS::AccountId}/yourQueueName"
+  s3_bucket: "eksdemobucket"
+  cf_domain_name: "${YOUR_CF}.cloudfront.net"
+  upload_event_queue_url: "https://sqs.${AWS_Region}.amazonaws.com/${AWS_AccountId}/upload-event-queue"
