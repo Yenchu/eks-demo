@@ -11,7 +11,7 @@
         "sqs:GetQueueAttributes",
         "sqs:ReceiveMessage"
       ],
-      "Resource": "arn:aws:sqs:ap-northeast-1:653446531446:upload-event-queue"
+      "Resource": "arn:aws:sqs:${AWS_Region}:${AWS_AccountId}:upload-event-queue"
     },
     {
       "Effect": "Allow",
@@ -42,7 +42,7 @@
         "ssm:GetParameter",
         "ssm:GetParametersByPath"
       ],
-      "Resource": "arn:aws:ssm:ap-northeast-1:653446531446:parameter/applications/ServerlessDemo/*"
+      "Resource": "arn:aws:ssm:${AWS_Region}:${AWS_AccountId}:parameter/applications/ServerlessDemo/*"
     }
   ]
 }
