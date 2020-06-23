@@ -15,7 +15,10 @@ func TestGetDownloadURL(t *testing.T) {
 		File:   "test.jpg",
 	}
 
-	downloadSvc := service.NewDownloadService()
+	downloadSvc, err := service.NewDownloadService()
+	if err != nil {
+		t.Fatalf("NewDownloadService failed: %v", err)
+	}
 
 	resp, err := downloadSvc.GetDownloadURL(req)
 	if err != nil {

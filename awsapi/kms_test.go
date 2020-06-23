@@ -1,8 +1,8 @@
 package awsapi_test
 
 import (
+	"eks-demo/awsapi"
 	"os"
-	"serverless-demo/awsapi"
 	"testing"
 )
 
@@ -17,7 +17,7 @@ func newTestKmsAPI() *awsapi.KmsAPI {
 	return awsapi.NewKmsAPI(cfg)
 }
 
-func TestListKeys(t *testing.T)  {
+func TestListKeys(t *testing.T) {
 
 	kmsApi := newTestKmsAPI()
 
@@ -28,7 +28,7 @@ func TestListKeys(t *testing.T)  {
 	t.Logf("ListKeys: %v", resp)
 }
 
-func TestEncrypt(t *testing.T)  {
+func TestEncrypt(t *testing.T) {
 
 	content := []byte("plain data")
 

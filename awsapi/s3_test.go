@@ -1,8 +1,8 @@
 package awsapi_test
 
 import (
+	"eks-demo/awsapi"
 	"os"
-	"serverless-demo/awsapi"
 	"testing"
 	"time"
 )
@@ -10,16 +10,16 @@ import (
 func TestGetPutObjectPreSignURL(t *testing.T) {
 
 	metadata := map[string]string{
-		"width": "800",
+		"width":  "800",
 		"height": "600",
 	}
 
 	reqData := &awsapi.S3PreSignURLRequest{
-		Bucket: os.Getenv("S3_BUCKET"),
-		Key: "resize/test2.jpg",
+		Bucket:      os.Getenv("S3_BUCKET"),
+		Key:         "resize/test2.jpg",
 		ContentType: "image/jpg",
-		Metadata: metadata,
-		TTL: 10 * time.Minute,
+		Metadata:    metadata,
+		TTL:         10 * time.Minute,
 	}
 
 	s3Api := awsapi.NewS3API()
@@ -34,16 +34,16 @@ func TestGetPutObjectPreSignURL(t *testing.T) {
 func TestGetPutObjectPreSignURLHeaders(t *testing.T) {
 
 	metadata := map[string]string{
-		"width": "800",
+		"width":  "800",
 		"height": "600",
 	}
 
 	reqData := &awsapi.S3PreSignURLRequest{
-		Bucket: os.Getenv("S3_BUCKET"),
-		Key: "resize/test.jpg",
+		Bucket:      os.Getenv("S3_BUCKET"),
+		Key:         "resize/test.jpg",
 		ContentType: "image/jpg",
-		Metadata: metadata,
-		TTL: 10 * time.Minute,
+		Metadata:    metadata,
+		TTL:         10 * time.Minute,
 	}
 
 	s3Api := awsapi.NewS3API()
@@ -67,7 +67,7 @@ func TestPutObject(t *testing.T) {
 	contentType := "image/jpg"
 
 	metadata := map[string]string{
-		"width": "1024",
+		"width":  "1024",
 		"height": "1024",
 	}
 

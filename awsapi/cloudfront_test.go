@@ -1,12 +1,13 @@
 package awsapi_test
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/cloudfront/sign"
+	"eks-demo/awsapi"
 	"io/ioutil"
 	"os"
-	"serverless-demo/awsapi"
 	"strings"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront/sign"
 )
 
 func TestLoadFilePrivKey(t *testing.T) {

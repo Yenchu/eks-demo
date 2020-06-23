@@ -1,7 +1,7 @@
 package awsapi_test
 
 import (
-	"serverless-demo/awsapi"
+	"eks-demo/awsapi"
 	"testing"
 )
 
